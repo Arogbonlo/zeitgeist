@@ -1,0 +1,60 @@
+name: Rust
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        scripts: [
+          "clippy",
+          "misc",
+          "parachain",
+          "standalone"
+        ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=none
+          source "$HOME/.cargo/env" 
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          rustup show
+
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v1
+        
+      - name: Tests
+        run: ./scripts/tests/${{ matrix.scripts }}.sh
+
+  fuzz:
+    name: Fuzz
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain=none
+          source "$HOME/.cargo/env" 
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          rustup show
+
+      - uses: actions-rs/install@v0.1
+        with:
+          crate: cargo-fuzz
+          use-tool-cache: true
+
+      - run: ./scripts/tests/fuzz.sh
